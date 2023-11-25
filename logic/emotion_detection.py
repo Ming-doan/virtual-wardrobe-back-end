@@ -1,4 +1,4 @@
-from facial_analysis import FacialImageProcessing
+from .facial_analysis import FacialImageProcessing
 import os
 import numpy as np
 import cv2
@@ -55,28 +55,17 @@ def predict_emotion(img, idx_to_class=idx_to_class):
         obj['score'] = scores[idx]
         obj['bbox'] = box[0:4]
 
-        print(obj)
-
         yield obj
 
 
-cap = cv2.VideoCapture(0)
-
-while True:
-    ret, frame = cap.read()
-    if ret:
-        for obj in predict_emotion(frame, idx_to_class):
-            bbox = obj['bbox']
-            emotion = obj['emotion']
-            score = obj['score']
-            x1, y1, x2, y2 = bbox
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(frame, emotion, (x1, y1-10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-            cv2.putText(frame, str(score), (x1, y1-30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-        cv2.imshow('frame', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-cap.release()
-cv2.destroyAllWindows()
+def get_emotion_mark(emotion):
+    if emotion == 'Happiness':
+        return 2
+    elif emotion == 'Surprise':
+        return 1
+    elif emotion == 'Sadness':
+        return -1
+    elif emotion == 'Anger':
+        return -2
+    else:
+        return 0
