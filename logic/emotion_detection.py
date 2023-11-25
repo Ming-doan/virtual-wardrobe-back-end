@@ -25,21 +25,17 @@ model = load_model(model_file)
 idx_to_class = {0: 'Anger', 1: 'Disgust', 2: 'Fear',
                 3: 'Happiness', 4: 'Neutral', 5: 'Sadness', 6: 'Surprise'}
 
-# using camera to capture video
-cap = cv2.VideoCapture(0)
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
+
+def predict_emotion(img, idx_to_class=idx_to_class):
     # frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
-    bounding_boxes, points = imgProcessing.detect_faces(frame)
+    bounding_boxes, points = imgProcessing.detect_faces(img)
     if len(bounding_boxes) == 0:
-        continue
+        return None
     points = points.T
     for bbox, p in zip(bounding_boxes, points):
         box = bbox.astype(np.int32)
         x1, y1, x2, y2 = box[0:4]
-        face_img = frame[y1:y2, x1:x2, :]
+        face_img = img[y1:y2, x1:x2, :]
 
         try:
             face_img = cv2.resize(face_img, INPUT_SIZE)
@@ -53,11 +49,34 @@ while True:
         scores = model.predict(inp)[0]
         idx = np.argmax(scores)
         emotion = idx_to_class[idx]
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.putText(frame, emotion, (x1, y1),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    cv2.imshow('frame', frame)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+
+        obj = {}
+        obj['emotion'] = emotion
+        obj['score'] = scores[idx]
+        obj['bbox'] = box[0:4]
+
+        print(obj)
+
+        yield obj
+
+
+cap = cv2.VideoCapture(0)
+
+while True:
+    ret, frame = cap.read()
+    if ret:
+        for obj in predict_emotion(frame, idx_to_class):
+            bbox = obj['bbox']
+            emotion = obj['emotion']
+            score = obj['score']
+            x1, y1, x2, y2 = bbox
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(frame, emotion, (x1, y1-10),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+            cv2.putText(frame, str(score), (x1, y1-30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+        cv2.imshow('frame', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 cap.release()
 cv2.destroyAllWindows()
